@@ -1,47 +1,25 @@
-function [binding,parameters]= generate_binding(options,assignment,program,pi_prim)
+function [binding,modules] = generate_binding(options,modules)
 
-% INPUTS
-%     assignment: assignment of genes into modules
-%     program: regulatory program consisting of a number of regulators and a decision tree
+% binding is a PxG binary matrix
+% - P is # of all regulators
+% - G is # of genes
 
-if nargin < 4
-    program = generate_program(options);
- 
-    if nargin < 3
-        assignment = generate_assignment(options);
-%         
-%         if nargin < 2
-%             parameters = options.parameters;
-%         end
-    end
+if nargin == 1
+    modules = generate_modules(options);
 end
 
+binding = sparse(options.num_regulators,options.num_genes);
 
-
-for ii = 1:options.num_modules
-    parents = program{ii}.regulators;
-    
-    for jj = 1:options.num_genes
-        
-        if assignment(jj) == ii % gene belongs to this module
-            clear data;
-
-            for kk = 1:length(parents)
-                data(kk) = binornd(1,pi_prim{ii}(kk));
+for module = modules
+    parents = module.regulators;
+    %pi_prim = module.pi_prim;
+    for gene = module.genes
+        for r = options.regulators
+            if ismember(r,parents) == 1
+                binding(r,gene) = binornd(1,options.bind_prob);
+            else
+                binding(r,gene) = binornd(1,1-options.bind_prob);
             end
-
-            parameters{jj}.pi = pi_prim{ii};
-            
-            binding{jj}.data = data;
-            binding{jj}.gene_id = jj;
-            binding{jj}.module = ii;
-            
-            binding{jj}.num_modules = options.num_modules;
-%             binding{jj}.assignment = assignment;
-%             binding{jj}.program = program;
-            
-           % binding{jj}.parameters = parameters;
-            
         end
     end
 end

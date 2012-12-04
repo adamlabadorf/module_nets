@@ -1,5 +1,11 @@
 
-[options, program, real_assignment, real_pi_prim, data_binding] = generate_data();
+[options, real_modules, binding] = generate_data();
+
+% reassign regulators for inference
+trial_modules = real_modules;
+for mm = 1:options.num_modules
+    trial_modules(mm).regulators = options.regulators(ceil(rand(1,2)*length(options.regulators)));
+end
 
 % inference
-[assignment] = inference_gene_assignment(options,assignment,program,data_binding);
+[modules] = inference_regulator_assignment(options, trial_modules, binding);

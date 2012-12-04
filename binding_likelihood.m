@@ -1,22 +1,9 @@
-function [ll2]= binding_likelihood(options,assignment,program,pi_prim,B)
+function [ll2]= binding_likelihood(options,binding,modules)
 
-% parameters = B.parameteres;
-% pi_prim = parameters.pi_prim;
+for module = modules
 
-for ii = 1:options.num_modules
-    
-    
-    pi_module = pi_prim{ii};
-    
-    for jj = 1:options.num_genes
-        
-        if assignment(jj) == ii % gene belongs to this module
-            
-           gene_data = B{jj}.data;
-           ll_gene(jj) = sum(gene_data .* log(pi_module) + (1-gene_data).*log(1-pi_module));
-           
-        end
-    end
+    ll_module(module.id) = binding_likelihood_mod(options,binding,module);
+
 end
 
-ll2 = sum(ll_gene);
+ll2 = sum(ll_module);
