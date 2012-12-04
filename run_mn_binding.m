@@ -1,3 +1,6 @@
+#!/usr/bin/octave -qf
+out_fn = argv(){1};
+kind = argv(){2};
 % assignment
 % 
 % Definitions:
@@ -67,14 +70,14 @@ function [modules] = randomize_regulators(options,modules)
     end
 end
 
-options = create_options('medium');
+options = create_options(kind);
 
 [binding,real_modules] = generate_binding(options);
 real_ll = prob_bind(options,real_modules,binding)
 real_assignment = get_module_assignment(real_modules);
 
 % randomize assignment
-modules = randomize_assignment(options,real_modules);
+%modules = randomize_assignment(options,real_modules);
 
 % randomize pi
 %modules = randomize_pi(options,real_modules);
@@ -90,7 +93,7 @@ before_ll = prob_bind(options,modules,binding)
 for iter = 1:options.mh_samples
 
     % infer assignment
-    modules = infer_assignment_gibbs(options,modules,binding);
+    %modules = infer_assignment_gibbs(options,modules,binding);
     num_genes = arrayfun(@(x) length(x.genes),modules)
 
     % infer pi
@@ -102,6 +105,9 @@ for iter = 1:options.mh_samples
 
     ll = prob_bind(options,modules,binding)
 
+    lls(iter) = ll;
+    module_samples{iter} = modules;
+
     assignment = get_module_assignment(modules);
     frac_correct = sum(assignment == real_assignment)/length(assignment)
     num_regulators = arrayfun(@(x) length(x.regulators),modules)
@@ -111,11 +117,5 @@ end
 
 after_ll = prob_bind(options,modules,binding)
 
-assignment = get_module_assignment(modules);
-for m = modules
-    m;
-    real_assignment(m.genes);
-    accuracy = sum(assignment(m.genes) == real_assignment(m.genes))/length(m.genes);
-end
 
-%fb = full(binding);
+save(argv(){1})

@@ -13,7 +13,7 @@ if strcmp(kind,'easy')
     options.num_regulators = length(options.regulator_names);
     options.regulators = 1:options.num_regulators;
     options.bind_prob = 0.99;
-    options.mh_samples = 1000;
+    options.mh_samples = 200;
 
 elseif strcmp(kind,'medium')
     options.num_genes = 300;
