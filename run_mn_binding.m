@@ -37,9 +37,10 @@ kind = argv(){2};
 %            if all regulators moved out of module:
 %                redistribute genes randomly to other modules
 
-function [modules] = randomize_assignment(options,modules)
+function [modules] = randomize_assignment(options,in_modules)
     rand_modules = generate_modules(options);
-    for ii = 1:length(modules)
+    for ii = 1:length(in_modules)
+        modules(ii) = in_modules(ii);
         modules(ii).genes = rand_modules(ii).genes;
     end
 end
@@ -68,6 +69,15 @@ function [modules] = randomize_regulators(options,modules)
         end
         modules(mm) = new_module;
     end
+end 
+
+function [regs,genes] = compare_modules(mod1,mod2)
+    for i = 1:length(mod1)
+        for j = i:length(mod2)
+            regs(i,j) = length(setdiff(mod1(i).regulators,mod2(j).regulators));
+            genes(i,j) = length(setdiff(mod1(i).genes,mod2(j).genes));
+        end
+    end
 end
 
 options = create_options(kind);
@@ -77,24 +87,27 @@ real_ll = prob_bind(options,real_modules,binding)
 real_assignment = get_module_assignment(real_modules);
 
 % randomize assignment
-%modules = randomize_assignment(options,real_modules);
+modules = real_modules;
+modules = randomize_assignment(options,modules);
 
 % randomize pi
-%modules = randomize_pi(options,real_modules);
+%modules = randomize_pi(options,modules);
 
 % randomize regulators
-modules = randomize_regulators(options,real_modules);
+modules = randomize_regulators(options,modules);
 
 assignment = get_module_assignment(modules);
 
 before_module = modules;
 before_ll = prob_bind(options,modules,binding)
 
+[regs,genes] = compare_modules(before_module,real_modules)
+
 for iter = 1:options.mh_samples
 
     % infer assignment
-    %modules = infer_assignment_gibbs(options,modules,binding);
-    num_genes = arrayfun(@(x) length(x.genes),modules)
+    modules = infer_assignment_gibbs(options,modules,binding);
+    num_genes = arrayfun(@(x) length(x.genes),modules);
 
     % infer pi
     %modules = infer_pi_mh(options,modules,binding);
@@ -103,19 +116,27 @@ for iter = 1:options.mh_samples
     % infer regulators
     modules = infer_regulators_gibbs(options,modules,binding);
 
-    ll = prob_bind(options,modules,binding)
+    ll = prob_bind(options,modules,binding);
 
     lls(iter) = ll;
     module_samples{iter} = modules;
 
-    assignment = get_module_assignment(modules);
-    frac_correct = sum(assignment == real_assignment)/length(assignment)
-    num_regulators = arrayfun(@(x) length(x.regulators),modules)
-    num_pi = arrayfun(@(x) sum(x.pi_prim ~= 0),modules)
-
 end
 
+
 after_ll = prob_bind(options,modules,binding)
+
+best_iteration = [1:length(lls)](lls == max(lls));
+best_modules = module_samples{lls == max(lls)};
+[regs,genes] = compare_modules(best_modules,real_modules)
+'real regulators'
+real_modules.regulators
+'best regulators'
+best_modules.regulators
+'real genes'
+real_modules.genes
+'best genes'
+best_modules.genes
 
 
 save(argv(){1})

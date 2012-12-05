@@ -8,11 +8,13 @@ function [modules] = infer_regulators_gibbs(options,modules,binding)
         module_lls(m.id) = prob_bind_module(options,m,binding);
     end
 
-    for r = options.regulators
+    regs_to_update = 1:options.num_regulators;
+    %regs_to_update = randsamp(1:options.num_regulators,ones(options.num_regulators),floor(options.num_regulators*0.1));
+    for r =regs_to_update 
         orig_module = modules(regulator_assignment(r));
         %orig_ll = prob_bind_module(options,orig_module,binding);
-        orig_ll = module_lls(orig_module.id);
-        mean_orig_ll = orig_ll/(length(orig_module.regulators)*length(orig_module.genes));
+        %orig_ll = module_lls(orig_module.id);
+        orig_ll = prob_bind_module(options,orig_module,binding);
 
         % if removing regulator would destroy the module leave it
         if length(orig_module.regulators) == 1
@@ -24,16 +26,17 @@ function [modules] = infer_regulators_gibbs(options,modules,binding)
         prop_module.regulators(prop_module.regulators == r) = [];
         %prop_ll = prob_bind_module(options,prop_module,binding);
 
-        orig_reg_ll = prob_reg(r,orig_module,binding);
-        prop_ll = orig_ll - orig_reg_ll;
-        mean_prop_ll = prop_ll/(length(prop_module.regulators)*length(prop_module.genes));
+        %orig_reg_ll = prob_reg(r,orig_module,binding);
+        %prop_ll = orig_ll - orig_reg_ll;
+        prop_ll = prob_bind_module(options,prop_module,binding);
 
         % no change to likelhood if we stay the same
-        %ll_ratios(orig_module.id) = 0;
+        ll_ratios(orig_module.id) = 0;
+        ll(orig_module.id) = orig_ll;
         for m_i = setdiff(1:options.num_modules,orig_module.id)
 
-            %gene_module_ll = prob_bind_module(options,orig_module,binding);
-            %other_orig_ll = prob_bind_module(options,modules(m_i),binding);
+            %other_orig_ll = module_lls(other_module.id);
+            other_orig_ll = prob_bind_module(options,modules(m_i),binding);
 
             % concatenate the gene onto module
             other_module = modules(m_i);
@@ -42,23 +45,18 @@ function [modules] = infer_regulators_gibbs(options,modules,binding)
             other_modules(m_i) = other_module;
 
             %prop_ll = prob_bind_module(options,prop_module,binding);
-            %other_ll = prob_bind_module(options,other_module,binding);
+            other_prop_ll = prob_bind_module(options,other_module,binding);
 
-            other_ll = module_lls(other_module.id);
-            mean_other_ll = other_ll/(length(modules(m_i).regulators)*length(modules(m_i).genes));
-
-            other_reg_ll = prob_reg(r,other_module,binding);
-            other_prop_ll = other_ll + other_reg_ll;
-            mean_other_prop_ll = other_prop_ll/(length(other_module.regulators)*length(other_module.genes));
+            %other_reg_ll = prob_reg(r,other_module,binding);
+            %other_prop_ll = other_orig_ll + other_reg_ll;
+            other_prop_ll = prob_bind_module(options,other_module,binding);
             other_modules_lls(m_i) = other_prop_ll;
 
-            %ll_ratios(m_i) = other_reg_ll/length(other_module.genes) - orig_reg_ll/length(orig_module.genes);
-            ll_ratios(m_i) = (mean_prop_ll + mean_other_prop_ll) - (mean_orig_ll + mean_other_ll);
-
+            ll_ratios(m_i) = (prop_ll + other_prop_ll) - (orig_ll + other_orig_ll);
         end
 
         choice_proportions = exp(ll_ratios);
-        choice = randsamp(1:length(ll_ratios),choice_proportions,1);
+        choice = randsamp(1:length(choice_proportions),choice_proportions,1);
         %choice = [1:length(ll_ratios)](ll_ratios == max(ll_ratios))(1);
         if choice ~= orig_module.id % picked a different module
             %['moving ' num2str(gene_i) ' from ' num2str(gene_module.id) ' to ' num2str(choice)]
